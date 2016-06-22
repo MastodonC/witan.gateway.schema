@@ -1,7 +1,8 @@
 (ns witan.gateway.schema
   (:require [schema.core :as s]
             #?(:clj [schema-contrib.core :as sc])
-            #?(:clj [witan.gateway.macros :refer [defversions]]))
+            #?(:clj [witan.gateway
+                     .macros :refer [defversions]]))
   #?(:cljs
      (:require-macros [witan.gateway.macros :refer [defversions]])))
 
@@ -47,7 +48,9 @@
          {:command/key s/Keyword
           :command/version s/Str
           :command/id s/Any
-          (s/optional-key :command/params) s/Any}))
+          (s/optional-key :command/params) s/Any
+          (s/optional-key :command/created-at) #? (:clj  sc/ISO-Date-Time
+                                                   :cljs s/Str)}))
 
 (def CommandReceipt
   (merge MessageBase
