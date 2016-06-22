@@ -57,7 +57,9 @@
          {:command/key s/Keyword
           :command/version s/Str
           :command/id s/Any
-          :command/receipt s/Uuid}))
+          :command/receipt s/Uuid
+          :command/created-at #? (:clj  sc/ISO-Date-Time
+                                  :cljs s/Str)}))
 
 (def Event
   (merge MessageBase
