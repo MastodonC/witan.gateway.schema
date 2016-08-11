@@ -22,7 +22,7 @@
 
 (defn semver?
   [x]
-  (re-find #"(?<=^[Vv]|^)\d+\.\d+\.\d+$" x))
+  (re-find #"^\d+\.\d+\.\d+$" "1.0.0"))
 
 (def Semver
   (s/pred semver?))
@@ -111,6 +111,7 @@
 
 (defn validate-message
   ([version msg]
+   (s/validate Semver version)
    (-> Message
        (get version)
        (s/validate msg)))
@@ -120,6 +121,7 @@
 
 (defn check-message
   [version msg]
+  (s/validate Semver version)
   (-> Message
       (get version)
       (s/check msg)))
@@ -140,12 +142,14 @@
 
 (defn validate-workspace
   [version msg]
+  (s/validate Semver version)
   (-> WorkspaceMessage
       (get version)
       (s/validate msg)))
 
 (defn check-workspace
   [version msg]
+  (s/validate Semver version)
   (-> WorkspaceMessage
       (get version)
       (s/check msg)))
