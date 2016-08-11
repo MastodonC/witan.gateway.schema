@@ -5,6 +5,10 @@
   #?(:cljs
      (:require-macros [witan.gateway.macros :refer [defversions]])))
 
+(def DateTime
+  #? (:clj  (s/if string? s/Str sc/ISO-Date-Time)
+      :cljs s/Str))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Message
 
@@ -54,15 +58,15 @@
          {:command/key s/Keyword
           :command/version s/Str
           :command/id s/Any
-          :command/receipt s/Uuid}))
+          :command/receipt s/Uuid
+          :command/received-at DateTime}))
 
 (def Event
   (merge MessageBase
          {:event/key s/Keyword
           :event/version s/Str
           :event/params s/Any
-          :event/created-at #? (:clj  sc/ISO-Date-Time
-                                :cljs s/Str)
+          :event/created-at DateTime
           :command/receipt s/Uuid}))
 
 (defversions Message
@@ -92,8 +96,11 @@
 (defversions Workspace
   "1.0"
   {:workspace/name s/Str
-   :workspace/id s/Str
-   :workspace/owner s/Str})
+   :workspace/id s/Uuid
+   :workspace/owner-id s/Uuid
+   :workspace/owner-name s/Str
+   :workspace/modified DateTime
+   :workspace/description s/Str})
 
 (defn validate-workspace
   [version msg]
