@@ -20,68 +20,108 @@
   [m]
   (contains? m :command/error))
 
-(def MessageBase
+(defn semver?
+  [x]
+  (re-find #"^\d+\.\d+\.\d+$" x))
+
+(def Semver
+  (s/pred semver?))
+
+(def DateTime
+  #? (:clj  sc/ISO-Date-Time
+      :cljs s/Str))
+
+(defversions MessageBase
+  "1.0.0"
   {:message/type (s/enum :query
                          :query-response
                          :command
                          :command-receipt
+                         :command-processed
                          :event)})
 
-(def Query
-  (merge MessageBase
+(defversions Query
+  "1.0.0"
+  (merge (get MessageBase "1.0.0")
          {:query/id s/Any
           :query/edn s/Any}))
 
-(def QueryResponseBase
-  (merge MessageBase
+(defversions QueryResponseBase
+  "1.0.0"
+  (merge (get MessageBase "1.0.0")
          {:query/id s/Any}))
 
-(def QueryResponse
-  (s/conditional query-error? (merge QueryResponseBase
+(defversions QueryResponse
+  "1.0.0"
+  (s/conditional query-error? (merge (get QueryResponseBase "1.0.0")
                                      {:query/error s/Str})
-                 :else        (merge QueryResponseBase
+                 :else        (merge (get QueryResponseBase "1.0.0")
                                      {:query/results [s/Any]})))
 
-(def Command
-  (merge MessageBase
+(defversions Command
+  "1.0.0"
+  (merge (get MessageBase "1.0.0")
          {:command/key s/Keyword
-          :command/version s/Str
+          :command/version Semver
           :command/id s/Any
+          (s/optional-key :command/receipt) s/Uuid
+          (s/optional-key :command/created-at) DateTime
           (s/optional-key :command/params) s/Any}))
 
-(def CommandReceipt
-  (merge MessageBase
+(defversions CommandProcessed
+  "1.0.0"
+  (merge (get MessageBase "1.0.0")
          {:command/key s/Keyword
-          :command/version s/Str
+          :command/version Semver
           :command/id s/Any
-          :command/receipt s/Uuid}))
+          :command/receipt s/Uuid
+          :command/created-at DateTime
+          (s/optional-key :command/params) s/Any}))
 
-(def Event
-  (merge MessageBase
+(defversions CommandReceipt
+  "1.0.0"
+  (merge (get MessageBase "1.0.0")
+         {:command/key s/Keyword
+          :command/version Semver
+          :command/id s/Any
+          :command/receipt s/Uuid
+          :command/received-at DateTime}))
+
+(defversions Event
+  "1.0.0"
+  (merge (get MessageBase "1.0.0")
          {:event/key s/Keyword
-          :event/version s/Str
+          :event/version Semver
           :event/params s/Any
-          :event/created-at #? (:clj  sc/ISO-Date-Time
-                                :cljs s/Str)
+          ;;
+          :event/id s/Uuid
+          :event/created-at DateTime
+          :event/origin s/Str
           :command/receipt s/Uuid}))
 
 (defversions Message
-  "1.0"
+  "1.0.0"
   (s/conditional
-   (partial compare-message-type :query)           Query
-   (partial compare-message-type :query-response)  QueryResponse
-   (partial compare-message-type :command)         Command
-   (partial compare-message-type :command-receipt) CommandReceipt
-   (partial compare-message-type :event)           Event))
+   (partial compare-message-type :query)             (get Query "1.0.0")
+   (partial compare-message-type :query-response)    (get QueryResponse "1.0.0")
+   (partial compare-message-type :command)           (get Command "1.0.0")
+   (partial compare-message-type :command-processed) (get CommandProcessed "1.0.0")
+   (partial compare-message-type :command-receipt)   (get CommandReceipt "1.0.0")
+   (partial compare-message-type :event)             (get Event "1.0.0")))
 
 (defn validate-message
-  [version msg]
-  (-> Message
-      (get version)
-      (s/validate msg)))
+  ([version msg]
+   (s/validate Semver version)
+   (-> Message
+       (get version)
+       (s/validate msg)))
+  ([version type msg]
+   (s/validate (s/eq type) (:message/type msg))
+   (validate-message version msg)))
 
 (defn check-message
   [version msg]
+  (s/validate Semver version)
   (-> Message
       (get version)
       (s/check msg)))
@@ -89,20 +129,27 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Workspace
 
-(defversions Workspace
-  "1.0"
+(defversions WorkspaceMessage
+  "1.0.0"
   {:workspace/name s/Str
-   :workspace/id s/Str
-   :workspace/owner s/Str})
+   :workspace/id s/Uuid
+   :workspace/owner-id s/Uuid
+   :workspace/description s/Str
+   :workspace/modified DateTime
+   (s/optional-key :workspace/workflow)  [s/Any]
+   (s/optional-key :workspace/catalog)   [s/Any]
+   (s/optional-key :workspace/owner-name) s/Str})
 
 (defn validate-workspace
   [version msg]
-  (-> Workspace
+  (s/validate Semver version)
+  (-> WorkspaceMessage
       (get version)
       (s/validate msg)))
 
 (defn check-workspace
   [version msg]
-  (-> Workspace
+  (s/validate Semver version)
+  (-> WorkspaceMessage
       (get version)
       (s/check msg)))
