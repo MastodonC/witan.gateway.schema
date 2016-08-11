@@ -22,7 +22,7 @@
 
 (defn semver?
   [x]
-  (re-find #"^\d+\.\d+\.\d+$" "1.0.0"))
+  (re-find #"^\d+\.\d+\.\d+$" x))
 
 (def Semver
   (s/pred semver?))
